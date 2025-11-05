@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { api } from '../lib/api'
 
 export default function Quiz({ quiz, onSubmit, onBack }) {
   const [answers, setAnswers] = useState({})

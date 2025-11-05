@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import UploadForm from './components/UploadForm'
 import Quiz from './components/Quiz'
 import Results from './components/Results'
@@ -53,12 +53,6 @@ function AppShell() {
   )
 }
 
-export default function App() {
-  return (
-    <BrowserRouter>
-      <AppShell />
-    </BrowserRouter>
-  )
-}
+export default function App() { return <AppShell /> }
 
 
