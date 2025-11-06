@@ -13,6 +13,10 @@
 2. Click **"Sign Up"** (use GitHub login for easiest setup)
 3. Complete the signup process
 
+**⚠️ Important:** Fly.io will ask you to add a payment method (credit card). This is for verification only - you won't be charged unless you exceed the free tier limits (3 VMs, 160GB transfer/month). Your app should stay within free limits.
+
+**Don't want to add a payment method?** See **Alternative Options** section at the bottom of this guide.
+
 ### Step 2: Install Fly CLI
 **For Windows (PowerShell):**
 ```powershell
@@ -216,4 +220,23 @@ flyctl open
 - Fly.io free tier: 3 shared-cpu-1x VMs with 256MB RAM
 - Vercel: Unlimited deployments on free tier
 - Both are free for personal projects!
+
+---
+
+## Alternative: If You Don't Want to Add Payment Info
+
+**Fly.io requires a payment method** (credit card) for verification, even on the free tier. If you prefer not to add one, use **Cyclic.sh** instead:
+
+### Option: Use Cyclic.sh (100% Free, No Credit Card)
+
+1. **Sign up**: Go to https://cyclic.sh → Sign up with GitHub
+2. **Create App**: Click "New App" → Connect your GitHub repo
+3. **Configure**:
+   - **Root Directory**: `server`
+   - **Build Command**: `npm ci`
+   - **Start Command**: `npm start`
+4. **Deploy**: Click deploy, get your URL (e.g., `https://your-app.cyclic.app`)
+5. **Use this URL** in Vercel's `VITE_API_BASE` environment variable instead of Fly.io
+
+**Cyclic.sh is completely free** and doesn't require a credit card. Perfect alternative!
 

@@ -1,123 +1,96 @@
-Quizgen - Auto MCQ Generator from Lecture Materials
+# Quizgen - Auto MCQ Generator from Lecture Materials
 
-Overview
-- Upload a lecture/assignment presentation (PDF/PPT/PPTX/TXT) or paste text
-- Backend extracts text and generates MCQs automatically
-- Frontend shows an interactive quiz and final results with a score
+## Overview
+- Upload a PDF/TXT file or paste text directly
+- **Everything runs in your browser** - no backend needed!
+- Automatically generates MCQs from your content
+- Interactive quiz interface with instant results
+- All data stored locally in your browser (localStorage)
 
-Tech Stack
-- Backend: Node.js + Express, Multer, textract
-- Frontend: React + Vite, react-router
+## Tech Stack
+- **Frontend**: React + Vite, react-router
+- **Text Extraction**: PDF.js (for PDFs), FileReader API (for text files)
+- **Storage**: Browser localStorage (no server needed!)
 
-Prerequisites
-- Node.js 18+
-- On Windows, textract may require additional dependencies for some formats. If extraction fails for PPT/PPTX, try converting to PDF or TXT.
+## Features
+✅ **100% Client-Side** - No backend, no API calls, works offline after first load  
+✅ **PDF Support** - Extract text from PDF files directly in browser  
+✅ **Text Files** - Upload .txt files or paste text directly  
+✅ **Auto Quiz Generation** - Creates 10 multiple-choice questions from your content  
+✅ **Local Storage** - Quizzes and results saved in your browser  
+✅ **No Installation** - Just open the app and use it!
 
-Setup
-1) Install dependencies
+## Prerequisites
+- Modern web browser (Chrome, Firefox, Edge, Safari)
+- Node.js 18+ (only needed for local development)
 
-Windows PowerShell:
+---
+
+## 🚀 Quick Start (Local Development)
+
+### 1. Install Dependencies
+```powershell
+cd "W:\Uni Work\Quizgen\client"
+npm install
 ```
-cd "W:\Uni Work\Quizgen"
-cd server; npm install; cd ..
-cd client; npm install; cd ..
+
+### 2. Run Development Server
+```powershell
+npm run dev
 ```
 
-2) Run the servers (two terminals)
-```
-cd "W:\Uni Work\Quizgen\server"; npm run dev
-```
-```
-cd "W:\Uni Work\Quizgen\client"; npm run dev
-```
-
-3) Open the app
+### 3. Open in Browser
 - Visit http://localhost:5173
+- That's it! No backend needed!
 
-Usage
-1. On the homepage, upload a PDF/PPT/PPTX/TXT (or paste text)
-2. Click Generate Quiz to create a 10-question MCQ
-3. Answer questions and submit
-4. See which answers were correct/wrong and your final score
+---
 
-Notes
-- Files are not persisted; quizzes are stored in-memory and cleared on server restart
-- If PPT/PPTX extraction fails on your system, try uploading a PDF or paste text instead
+## 📦 Production Build
 
-## 🚀 FREE Cloud Deployment (No Install Required)
+### Build for Production
+```powershell
+cd client
+npm run build
+```
 
-**Step 1: Push to GitHub**
-- Create a new repository on GitHub
-- Push this entire folder to GitHub
+### Preview Production Build
+```powershell
+npm run preview
+```
 
-**Step 2: Deploy Backend (Choose ONE)**
+The built files will be in `client/dist/` - you can deploy this folder to any static hosting!
 
-### Option A: Railway (Recommended - $5/month free credit)
-1. Go to https://railway.app and sign up with GitHub
-2. Click "New Project" → "Deploy from GitHub repo"
-3. Select your repository
-4. Click "Add Service" → "GitHub Repo" → select your repo again
-5. In service settings:
-   - **Root Directory**: `server`
-   - **Build Command**: `npm ci`
-   - **Start Command**: `npm start`
-6. After deployment, copy your Railway URL (e.g., `https://your-app.up.railway.app`)
+---
 
-### Option B: Fly.io (Free tier available)
-1. Go to https://fly.io and sign up
-2. Install Fly CLI: https://fly.io/docs/getting-started/installing-flyctl/
-3. In terminal, navigate to `server` folder:
-   ```bash
-   cd server
-   fly launch
-   ```
-4. Follow prompts (use default settings)
-5. Deploy: `fly deploy`
-6. Copy your Fly.io URL (e.g., `https://your-app.fly.dev`)
+## 🌐 FREE Cloud Deployment (No Backend Needed!)
 
-### Option C: Cyclic.sh (100% Free)
-1. Go to https://cyclic.sh and sign up with GitHub
-2. Click "New App" → Connect your GitHub repo
-3. Settings:
-   - **Root Directory**: `server`
-   - **Build Command**: `npm ci`
-   - **Start Command**: `npm start`
-4. Deploy and copy URL (e.g., `https://your-app.cyclic.app`)
+Since this is a **client-only app**, deployment is super simple! Just deploy the `client` folder.
 
-### Option D: Replit (Free tier)
-1. Go to https://replit.com and sign up
-2. Click "Create Repl" → "Import from GitHub"
-3. Select your repo and set root to `server`
-4. Click "Run" - Replit auto-detects Node.js
-5. Copy your Replit URL (e.g., `https://your-app.replit.app`)
-
-**Step 3: Deploy Frontend (Choose ONE)**
-
-### Option A: Vercel (Recommended - Free Forever)
+### Option 1: Vercel (Recommended - Free Forever)
 1. Go to https://vercel.com and sign up with GitHub
-2. Click "New Project" → Import your GitHub repo
+2. Click **"New Project"** → Import your GitHub repo
 3. Configure:
    - **Framework Preset**: `Vite`
    - **Root Directory**: `client`
    - **Build Command**: `npm run build`
    - **Output Directory**: `dist`
-   - **Environment Variables**: Add `VITE_API_BASE` = your backend URL from Step 2
-4. Click "Deploy"
+4. Click **"Deploy"**
 5. Your app is live! (e.g., `https://your-app.vercel.app`)
 
-### Option B: Netlify (Free Forever)
+**No environment variables needed!** No backend to configure!
+
+### Option 2: Netlify (Free Forever)
 1. Go to https://netlify.com and sign up with GitHub
-2. Click "Add new site" → "Import an existing project"
+2. Click **"Add new site"** → **"Import an existing project"**
 3. Select your GitHub repo
 4. Configure:
    - **Base directory**: `client`
    - **Build command**: `npm run build`
    - **Publish directory**: `client/dist`
-   - **Environment variables**: Add `VITE_API_BASE` = your backend URL
-5. Click "Deploy site"
-6. Your app is live! (e.g., `https://your-app.netlify.app`)
+5. Click **"Deploy site"**
+6. Done! (e.g., `https://your-app.netlify.app`)
 
-### Option C: Cloudflare Pages (Free Forever)
+### Option 3: Cloudflare Pages (Free Forever)
 1. Go to https://pages.cloudflare.com and sign up
 2. Connect your GitHub account
 3. Select your repository
@@ -126,14 +99,119 @@ Notes
    - **Build command**: `npm run build`
    - **Build output directory**: `dist`
    - **Root directory**: `client`
-   - **Environment variables**: Add `VITE_API_BASE` = your backend URL
 5. Deploy!
 
-**Quick Comparison:**
-- **Backend**: Railway (easiest) > Cyclic.sh (100% free) > Fly.io > Replit
-- **Frontend**: Vercel (best) = Netlify (best) > Cloudflare Pages
+### Option 4: GitHub Pages
+1. Build your app: `cd client && npm run build`
+2. Push the `dist` folder to a `gh-pages` branch
+3. Enable GitHub Pages in your repo settings
+4. Done!
 
-**All options above are FREE and don't require installing anything on your computer!**
+---
 
+## 📖 Usage
 
+1. **Upload or Paste Content**
+   - Upload a PDF or TXT file, OR
+   - Paste text directly into the textarea
 
+2. **Generate Quiz**
+   - Click "Generate Quiz"
+   - Quiz is created instantly in your browser
+
+3. **Take the Quiz**
+   - Answer all questions
+   - Click "Submit"
+
+4. **View Results**
+   - See your score and which answers were correct/wrong
+   - Results are saved in your browser's localStorage
+
+---
+
+## 💾 Data Storage
+
+- **Quizzes**: Stored in `localStorage` with key `quiz_<id>`
+- **Results**: Stored in `localStorage` with key `results_<id>`
+- **Current Session**: Stored in `sessionStorage` as `currentQuizId`
+
+**Note**: Data is stored locally in your browser. Clearing browser data will remove saved quizzes.
+
+---
+
+## 🔧 Supported File Formats
+
+- ✅ **PDF** - Extracted using PDF.js
+- ✅ **TXT** - Read directly using FileReader API
+- ✅ **Plain Text** - Paste directly into textarea
+
+**For other formats** (PPT, DOCX, etc.), convert to PDF or copy/paste the text.
+
+---
+
+## 🎯 Advantages of Client-Only Approach
+
+1. **No Backend Costs** - Zero server expenses
+2. **Privacy** - All processing happens in your browser
+3. **Speed** - No network latency for quiz generation
+4. **Offline** - Works offline after first page load
+5. **Simple Deployment** - Just static files, deploy anywhere
+6. **No API Keys** - No configuration needed
+
+---
+
+## 📝 Notes
+
+- PDF extraction works best with text-based PDFs (not scanned images)
+- Large PDFs may take a few seconds to process
+- Quizzes are generated algorithmically - quality depends on input text
+- All data stays in your browser - nothing is sent to any server
+
+---
+
+## 🛠️ Development
+
+### Project Structure
+```
+client/
+├── src/
+│   ├── components/     # React components
+│   ├── lib/           # Quiz generation & text extraction
+│   ├── App.jsx        # Main app component
+│   └── main.jsx       # Entry point
+└── package.json
+```
+
+### Key Files
+- `src/lib/quizGenerator.js` - Quiz generation logic
+- `src/lib/textExtraction.js` - PDF/text extraction
+- `src/components/UploadForm.jsx` - File upload & text input
+- `src/components/Quiz.jsx` - Quiz interface
+- `src/components/Results.jsx` - Results display
+
+---
+
+## 🆘 Troubleshooting
+
+**PDF extraction fails?**
+- Try a different PDF (some PDFs are image-based)
+- Copy text from PDF and paste directly
+
+**Quiz not generating?**
+- Make sure your text has enough content (at least a few sentences)
+- Check browser console (F12) for errors
+
+**Data lost after refresh?**
+- localStorage persists across sessions
+- sessionStorage is cleared when browser closes
+- If data is missing, generate a new quiz
+
+---
+
+## 📄 License
+
+Free to use for personal and educational purposes.
+
+---
+
+**Enjoy creating quizzes from your lecture materials! 🎓**

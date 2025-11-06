@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import UploadForm from './components/UploadForm'
 import Quiz from './components/Quiz'
 import Results from './components/Results'
-import { api } from './lib/api'
+import { gradeSubmission } from './lib/quizGenerator'
 
 function AppShell() {
   const [quiz, setQuiz] = useState(null)
@@ -11,21 +11,36 @@ function AppShell() {
   const [results, setResults] = useState(null)
   const navigate = useNavigate()
 
+  // Load quiz from localStorage if navigating back
+  useEffect(() => {
+    const storedQuizId = sessionStorage.getItem('currentQuizId')
+    if (storedQuizId) {
+      const storedQuiz = localStorage.getItem(`quiz_${storedQuizId}`)
+      if (storedQuiz) {
+        setQuiz(JSON.parse(storedQuiz))
+        setQuizId(storedQuizId)
+      }
+    }
+  }, [])
+
   const startQuiz = (payload) => {
     setQuiz(payload.quiz)
     setQuizId(payload.id)
     setResults(null)
+    sessionStorage.setItem('currentQuizId', payload.id)
     navigate('/quiz')
   }
 
-  const submitQuiz = async (answers) => {
-    const res = await fetch(api(`/api/quiz/${quizId}/submit`), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ answers })
-    })
-    const data = await res.json()
-    setResults(data)
+  const submitQuiz = (answers) => {
+    if (!quiz) return
+    
+    // Grade locally
+    const result = gradeSubmission(quiz, answers)
+    
+    // Store results in localStorage
+    localStorage.setItem(`results_${quizId}`, JSON.stringify(result))
+    
+    setResults(result)
     navigate('/results')
   }
 
@@ -33,6 +48,7 @@ function AppShell() {
     setQuiz(null)
     setQuizId(null)
     setResults(null)
+    sessionStorage.removeItem('currentQuizId')
     navigate('/')
   }
 
