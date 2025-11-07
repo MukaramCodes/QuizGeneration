@@ -5,6 +5,7 @@ const STOPWORDS = new Set(
 );
 
 const MIN_SENTENCE_LENGTH = 35;
+const MAX_SENTENCE_LENGTH = 280;
 
 function sanitizeWord(word) {
   return word ? word.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '').toLowerCase() : '';
@@ -26,13 +27,28 @@ function prettifyOption(value) {
   return titleCase(value.replace(/\s+/g, ' ').trim());
 }
 
+function cleanSentence(sentence) {
+  return sentence.replace(/[“”"\(\)]/g, '').trim();
+}
+
+function isInformativeSentence(sentence) {
+  const words = sentence.split(/\s+/).filter(Boolean);
+  if (words.length < 6) return false;
+  if (sentence.length < MIN_SENTENCE_LENGTH || sentence.length > MAX_SENTENCE_LENGTH) return false;
+  const stopwordCount = words.reduce(
+    (count, word) => (STOPWORDS.has(word.toLowerCase()) ? count + 1 : count),
+    0
+  );
+  return stopwordCount >= Math.max(3, Math.floor(words.length * 0.2));
+}
+
 function sentenceSplit(text) {
   return text
     .replace(/\r/g, ' ')
     .replace(/\n{2,}/g, '\n')
     .split(/[\.\!\?\n]+/g)
-    .map((s) => s.trim())
-    .filter((s) => s.length >= MIN_SENTENCE_LENGTH);
+    .map((s) => cleanSentence(s))
+    .filter((s) => isInformativeSentence(s));
 }
 
 function tokenize(text) {
@@ -55,6 +71,67 @@ function splitSentenceTokens(sentence) {
   return sentence
     .split(/\s+/)
     .filter(Boolean);
+}
+
+function cleanClause(text) {
+  return text.replace(/\s+/g, ' ').replace(/["“”]/g, '').trim();
+}
+
+function looksLikeQuestion(text) {
+  const lower = text.toLowerCase();
+  if (text.includes('?')) return true;
+  return /(who|what|when|where|why|how)/.test(lower);
+}
+
+function isLikelyTitle(text) {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length <= 3) return true;
+  const capitalized = words.filter((w) => /^[A-Z][a-z]+$/.test(w));
+  return capitalized.length >= words.length - 1;
+}
+
+function extractDefinitions(sentences, freq) {
+  const definitions = [];
+  const pattern = /(.+?)\s+(is|are|refers to|means|consists of|represents|describes|defines|includes|involves)\s+(.+)/i;
+
+  sentences.forEach((sentence, sentenceIndex) => {
+    const cleanedSentence = cleanSentence(sentence);
+    const match = cleanedSentence.match(pattern);
+    if (!match) return;
+
+    const subjectRaw = cleanClause(match[1]);
+    const predicateRaw = cleanClause(match[3]).replace(/[:;,\.]?$/, '');
+    if (!subjectRaw || !predicateRaw) return;
+    if (looksLikeQuestion(predicateRaw)) return;
+    if (predicateRaw.split(/\s+/).length < 5) return;
+    if (predicateRaw.length > 220) return;
+
+    const subjectWords = subjectRaw.split(/\s+/).filter(Boolean);
+    if (subjectWords.length < 2 || subjectWords.length > 8) return;
+    if (subjectWords.some((w) => /\d/.test(w))) return;
+    if (isLikelyTitle(subjectRaw)) return;
+
+    const subjectNormalized = subjectWords.map((w) => sanitizeWord(w)).join(' ');
+    if (!subjectNormalized) return;
+
+    const keywordOverlap = subjectWords.reduce((acc, word) => {
+      const key = sanitizeWord(word);
+      if (!key) return acc;
+      const weight = freq.get(key) || 0;
+      return acc + weight;
+    }, 0);
+
+    if (keywordOverlap < subjectWords.length) return;
+
+    definitions.push({
+      sentenceIndex,
+      subject: subjectRaw,
+      predicate: predicateRaw,
+      subjectNormalized,
+    });
+  });
+
+  return definitions;
 }
 
 function collectPhrases(sentences, freq) {
@@ -85,6 +162,8 @@ function collectPhrases(sentences, freq) {
       const normalized = normalizedParts.join(' ');
       const phrase = phraseParts.join(' ').trim();
       if (!phrase || phrase.length < 4) continue;
+      const uppercaseCount = phraseParts.filter((p) => /^[A-Z][a-z]+$/.test(p)).length;
+      if (uppercaseCount > phraseParts.length / 2) continue;
 
       const existing = phraseMap.get(normalized);
       const candidate = {
@@ -117,6 +196,52 @@ function shuffleArray(list) {
 function improveStem(stem) {
   const cleaned = stem.replace(/\s+/g, ' ').trim();
   return cleaned.includes('____') ? `Fill in the blank: ${cleaned}` : cleaned;
+}
+
+function cleanDefinitionText(text) {
+  return text.replace(/\s+/g, ' ').replace(/["“”]/g, '').trim();
+}
+
+function buildDefinitionQuestion(definition, allDefinitions, keywordList) {
+  const subject = cleanDefinitionText(definition.subject);
+  const predicate = cleanDefinitionText(definition.predicate);
+  if (!subject || !predicate) return null;
+
+  const question = `What best describes ${subject}?`;
+  const distractorPool = allDefinitions
+    .filter((d) => d.subjectNormalized !== definition.subjectNormalized)
+    .map((d) => cleanDefinitionText(d.predicate))
+    .filter((text) => text && text.toLowerCase() !== predicate.toLowerCase());
+
+  const distractors = [];
+  for (const option of shuffleArray(distractorPool)) {
+    if (distractors.length >= 3) break;
+    if (option.length < 5) continue;
+    if (option.length > 180) continue;
+    if (distractors.some((d) => d.toLowerCase() === option.toLowerCase())) continue;
+    distractors.push(option);
+  }
+
+  if (distractors.length < 3) {
+    for (const keyword of keywordList) {
+      if (distractors.length >= 3) break;
+      const option = titleCase(keyword);
+      if (!option || option.toLowerCase() === predicate.toLowerCase()) continue;
+      if (distractors.some((d) => d.toLowerCase() === option.toLowerCase())) continue;
+      distractors.push(option);
+    }
+  }
+
+  if (distractors.length < 3) return null;
+
+  const options = shuffleArray([predicate, ...distractors.slice(0, 3)]);
+  const answerIndex = options.findIndex((opt) => opt.toLowerCase() === predicate.toLowerCase());
+
+  return {
+    question,
+    options,
+    answerIndex: answerIndex >= 0 ? answerIndex : 0,
+  };
 }
 
 function buildQuestionFromCandidate(sentence, candidate, allPhrases, keywordList) {
@@ -208,10 +333,23 @@ export function generateQuizFromText(text, desiredCount = 10) {
     .sort((a, b) => b[1] - a[1])
     .map(([word]) => word);
 
+  const definitions = extractDefinitions(sentences, freq);
   const phrases = collectPhrases(sentences, freq);
   const questions = [];
+  const usedDefinitionSubjects = new Set();
   const usedSentences = new Set();
   const usedPhrases = new Set();
+
+  for (const definition of definitions) {
+    if (questions.length >= desiredCount) break;
+    if (usedDefinitionSubjects.has(definition.subjectNormalized)) continue;
+    const question = buildDefinitionQuestion(definition, definitions, keywordList);
+    if (question) {
+      questions.push(question);
+      usedDefinitionSubjects.add(definition.subjectNormalized);
+      usedSentences.add(definition.sentenceIndex);
+    }
+  }
 
   for (const candidate of phrases) {
     if (questions.length >= desiredCount) break;
