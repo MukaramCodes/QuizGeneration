@@ -1,75 +1,140 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const { nanoid } = require('nanoid');
-const { extractTextFromUpload, extractTextFromPlain } = require('./textExtraction');
-const { generateQuizFromText, gradeSubmission } = require('./quizGenerator');
-const { quizStore } = require('./store');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
 const port = process.env.PORT || 4000;
 
 app.use(cors());
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '2mb' }));
 
-// Ensure uploads dir exists
-const uploadsDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+const geminiApiKey = process.env.GEMINI_API_KEY;
+const geminiModelId = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
-const upload = multer({ dest: uploadsDir });
+let generativeModel = null;
+
+if (geminiApiKey) {
+  const client = new GoogleGenerativeAI(AIzaSyAkqsj_GQbN61t8XcrHC6sVmb15PEG7cW8);
+  generativeModel = client.getGenerativeModel({ model: geminiModelId });
+}
+
+const MAX_INPUT_CHARS = 15000;
+
+function buildPrompt({ sourceText, questionCount }) {
+  return `You are an expert instructional designer. Your task is to create a rigorous multiple-choice quiz from the provided course materials.
+
+Requirements:
+- Generate exactly ${questionCount} questions unless the material truly cannot support that many (minimum 3).
+- Each question must be meaningful, concept-focused, and answerable from the provided material.
+- Use varied question styles (definition, application, conceptual understanding). Avoid trivial recall or copying headings.
+- Provide 4 answer options labelled A-D implicitly in the array order. Options must be distinct, concise, and plausible.
+- Indicate the single correct option using the zero-based index field "correctIndex".
+- Provide a short explanation (1-2 sentences) referencing the material for why the correct answer is right.
+- If there is insufficient information for a question, omit it.
+- Output valid JSON with this schema:
+{
+  "title": string,
+  "questions": [
+    {
+      "question": string,
+      "options": [string, string, string, string],
+      "correctIndex": number,
+      "explanation": string
+    }
+  ]
+}
+
+Source material:
+${sourceText}`;
+}
+
+async function callGemini({ text, questionCount }) {
+  if (!generativeModel) {
+    throw new Error('GEMINI_API_KEY not configured');
+  }
+
+  const truncated = text.length > MAX_INPUT_CHARS ? text.slice(0, MAX_INPUT_CHARS) : text;
+  const prompt = buildPrompt({ sourceText: truncated, questionCount });
+
+  const response = await generativeModel.generateContent({
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: prompt }],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.4,
+      topP: 0.8,
+      topK: 40,
+      maxOutputTokens: 2048,
+      responseMimeType: 'application/json',
+    },
+  });
+
+  const textResponse = response.response.text();
+
+  let parsed;
+  try {
+    parsed = JSON.parse(textResponse);
+  } catch (error) {
+    console.error('Failed to parse Gemini response', error, textResponse);
+    throw new Error('Model returned invalid JSON');
+  }
+
+  if (!parsed || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+    throw new Error('Model did not return any questions');
+  }
+
+  const sanitizedQuestions = parsed.questions
+    .filter((q) =>
+      q &&
+      typeof q.question === 'string' && q.question.trim().length > 0 &&
+      Array.isArray(q.options) && q.options.length === 4 &&
+      typeof q.correctIndex === 'number' && q.correctIndex >= 0 && q.correctIndex < 4
+    )
+    .map((q) => ({
+      question: q.question.trim(),
+      options: q.options.map((opt) => String(opt).trim()),
+      correctIndex: Number(q.correctIndex),
+      explanation: q.explanation ? String(q.explanation).trim() : '',
+    }));
+
+  if (sanitizedQuestions.length === 0) {
+    throw new Error('Model output did not contain valid questions');
+  }
+
+  return {
+    title: parsed.title && parsed.title.trim().length ? parsed.title.trim() : 'AI-generated Quiz',
+    questions: sanitizedQuestions.slice(0, questionCount),
+  };
+}
 
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true });
+  res.json({ ok: true, model: geminiModelId, ready: Boolean(generativeModel) });
 });
 
-app.post('/api/upload', upload.single('file'), async (req, res) => {
+app.post('/api/generate', async (req, res) => {
   try {
-    const { body } = req;
-    let text = '';
+    const { text, count } = req.body || {};
 
-    if (req.file) {
-      text = await extractTextFromUpload(req.file);
-      // cleanup temp file
-      fs.unlink(req.file.path, () => {});
-    } else if (body && typeof body.text === 'string' && body.text.trim().length > 0) {
-      text = await extractTextFromPlain(body.text);
-    } else {
-      return res.status(400).json({ error: 'No file or text provided' });
+    if (!text || typeof text !== 'string' || text.trim().length < 20) {
+      return res.status(400).json({ error: 'A longer text sample is required to generate questions.' });
     }
 
-    if (!text || text.trim().length === 0) {
-      return res.status(422).json({ error: 'Could not extract text from input' });
-    }
+    const desiredCount = Math.min(Math.max(Number(count) || 10, 3), 20);
 
-    const quiz = generateQuizFromText(text, 10);
-    const id = nanoid(10);
-    quizStore.set(id, quiz);
+    const quiz = await callGemini({ text, questionCount: desiredCount });
 
-    res.json({ id, quiz });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.json({ quiz });
+  } catch (error) {
+    console.error('Generation failed', error);
+    res.status(500).json({ error: error.message || 'Failed to generate quiz.' });
   }
 });
 
-app.get('/api/quiz/:id', (req, res) => {
-  const quiz = quizStore.get(req.params.id);
-  if (!quiz) return res.status(404).json({ error: 'Quiz not found' });
-  res.json({ id: req.params.id, quiz });
-});
-
-app.post('/api/quiz/:id/submit', (req, res) => {
-  const quiz = quizStore.get(req.params.id);
-  if (!quiz) return res.status(404).json({ error: 'Quiz not found' });
-  const { answers } = req.body;
-  const result = gradeSubmission(quiz, answers || {});
-  res.json(result);
-});
-
 app.listen(port, () => {
-  console.log(`Server listening on http://localhost:${port}`);
+  console.log(`AI quiz server listening on http://localhost:${port}`);
 });
-
 

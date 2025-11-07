@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react'
 import { extractTextFromFile, extractTextFromPlain } from '../lib/textExtraction'
 import { generateQuizFromText } from '../lib/quizGenerator'
+import { api } from '../lib/api'
 
 const MAX_FILES = 10
+const QUESTION_COUNT = 10
 
 function normalizeExtractedText(raw = '') {
   return raw
@@ -82,13 +84,49 @@ export default function UploadForm({ onReady }) {
         return
       }
 
-      const quiz = generateQuizFromText(extractedText, 10)
-      if (!quiz.questions || quiz.questions.length === 0) {
-        setError('We could not generate any questions. Try adding more detailed content or additional lectures.')
+      let quiz = null
+      let aiError = null
+
+      try {
+        const response = await fetch(api('/api/generate'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: extractedText, count: QUESTION_COUNT })
+        })
+
+        if (response.ok) {
+          const payload = await response.json()
+          if (payload?.quiz?.questions?.length) {
+            quiz = {
+              title: payload.quiz.title || 'AI-generated Quiz',
+              questions: payload.quiz.questions
+            }
+          } else {
+            aiError = 'The AI response did not contain valid questions.'
+          }
+        } else {
+          const data = await response.json().catch(() => ({}))
+          aiError = data?.error || 'AI request failed.'
+        }
+      } catch (err) {
+        aiError = err.message || 'AI request failed.'
+      }
+
+      if (!quiz) {
+        console.warn('Falling back to heuristic generator because AI failed:', aiError)
+        quiz = generateQuizFromText(extractedText, QUESTION_COUNT)
+      }
+
+      if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+        setError(
+          aiError
+            ? `AI generation failed (${aiError}). Try adding more detailed content or additional lectures.`
+            : 'We could not generate any questions. Try adding more detailed content or additional lectures.'
+        )
         setLoading(false)
         return
       }
-      const id = Date.now().toString() // Simple ID generation
+      const id = Date.now().toString()
       
       // Store in localStorage
       localStorage.setItem(`quiz_${id}`, JSON.stringify(quiz))
