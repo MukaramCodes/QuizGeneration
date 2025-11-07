@@ -6,6 +6,14 @@ const STOPWORDS = new Set(
 
 const MIN_SENTENCE_LENGTH = 35;
 const MAX_SENTENCE_LENGTH = 280;
+const MIN_SENTENCE_LENGTH_LOOSE = 18;
+
+function cleanRawText(text = '') {
+  return text
+    .replace(/[\u2022\u2023\u25E6\u2043\u2219\u25CF\u25CB\u25A0\u25AA\u25AB\u2736\u2020\u2021\u00B7\uF0B7\uF0D8\uF0E0\uF0A7\uF076\uF0FC\uFF65\u30FB\u2219\u2666\u2665\uF0B1\uF0B2\u25C6\u25C7\u25B6\u25B7\u25BA\u25CF\u25CB\u25C6\u25D8\uF0A8]+/g, ' ')
+    .replace(/[•◦▪◆■□►▶]/g, ' ')
+    .replace(/[\u0000-\u001F]/g, ' ');
+}
 
 function sanitizeWord(word) {
   return word ? word.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '').toLowerCase() : '';
@@ -42,13 +50,22 @@ function isInformativeSentence(sentence) {
   return stopwordCount >= Math.max(3, Math.floor(words.length * 0.2));
 }
 
-function sentenceSplit(text) {
-  return text
+function sentenceSplitStrict(text) {
+  return cleanRawText(text)
     .replace(/\r/g, ' ')
     .replace(/\n{2,}/g, '\n')
     .split(/[\.\!\?\n]+/g)
     .map((s) => cleanSentence(s))
     .filter((s) => isInformativeSentence(s));
+}
+
+function sentenceSplitLoose(text) {
+  return cleanRawText(text)
+    .replace(/\r/g, ' ')
+    .replace(/\n{2,}/g, '\n')
+    .split(/[\.\!\?\n]+/g)
+    .map((s) => cleanSentence(s))
+    .filter((s) => s.length >= MIN_SENTENCE_LENGTH_LOOSE);
 }
 
 function tokenize(text) {
@@ -325,8 +342,52 @@ function createKeywordFallback(keyword, sentences, allPhrases, keywordList) {
   return null;
 }
 
+function buildSimpleSentenceQuestion(sentence, keywordList) {
+  const tokens = splitSentenceTokens(sentence);
+  const cleaned = tokens.map((tok) => sanitizeWord(tok));
+  const candidates = [];
+
+  cleaned.forEach((word, idx) => {
+    if (!word || STOPWORDS.has(word) || word.length < 4) return;
+    candidates.push({ index: idx, word: stripToken(tokens[idx]) });
+  });
+
+  if (!candidates.length) return null;
+  const target = candidates[Math.floor(Math.random() * candidates.length)];
+  const placeholderTokens = [...tokens];
+  const trailingMatch = tokens[target.index].match(/[.,!?;:]+$/);
+  placeholderTokens[target.index] = trailingMatch ? `____${trailingMatch[0]}` : '____';
+
+  const correct = prettifyOption(target.word);
+  if (!correct) return null;
+
+  const distractors = [];
+  for (const keyword of keywordList) {
+    if (distractors.length >= 3) break;
+    const option = titleCase(keyword);
+    if (!option || option.toLowerCase() === correct.toLowerCase()) continue;
+    if (distractors.some((d) => d.toLowerCase() === option.toLowerCase())) continue;
+    distractors.push(option);
+  }
+
+  if (distractors.length < 3) return null;
+
+  const options = shuffleArray([correct, ...distractors.slice(0, 3)]);
+  const answerIndex = options.findIndex((opt) => opt.toLowerCase() === correct.toLowerCase());
+
+  const stem = placeholderTokens.join(' ').replace(/\s+([.,!?;:])/g, '$1');
+
+  return {
+    question: improveStem(stem),
+    options,
+    answerIndex: answerIndex >= 0 ? answerIndex : 0,
+  };
+}
+
 export function generateQuizFromText(text, desiredCount = 10) {
-  const sentences = sentenceSplit(text);
+  const strictSentences = sentenceSplitStrict(text);
+  const looseSentences = sentenceSplitLoose(text);
+  const sentences = strictSentences.length ? strictSentences : looseSentences;
   const tokens = tokenize(text);
   const freq = buildFrequency(tokens);
   const keywordList = Array.from(freq.entries())
@@ -385,9 +446,21 @@ export function generateQuizFromText(text, desiredCount = 10) {
   }
 
   if (questions.length < desiredCount) {
+    const fallbackSentences = looseSentences.length ? looseSentences : sentences;
     for (const keyword of keywordList) {
       if (questions.length >= desiredCount) break;
-      const question = createKeywordFallback(keyword, sentences, phrases, keywordList);
+      const question = createKeywordFallback(keyword, fallbackSentences, phrases, keywordList);
+      if (question) {
+        questions.push(question);
+      }
+    }
+  }
+
+  if (questions.length === 0) {
+    const fallbackSentences = looseSentences.length ? looseSentences : sentences;
+    for (const sentence of fallbackSentences) {
+      if (questions.length >= desiredCount) break;
+      const question = buildSimpleSentenceQuestion(sentence, keywordList);
       if (question) {
         questions.push(question);
       }

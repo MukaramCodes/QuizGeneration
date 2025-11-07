@@ -4,6 +4,16 @@ import { generateQuizFromText } from '../lib/quizGenerator'
 
 const MAX_FILES = 10
 
+function normalizeExtractedText(raw = '') {
+  return raw
+    .replace(/[\u2022\u2023\u25E6\u2043\u2219\u25CF\u25CB\u25A0\u25AA\u25AB\u2736\u2020\u2021\u00B7\uF0B7\uF0D8\uF0E0\uF0A7\uF076\uF0FC\uFF65\u30FB\u2219\u2666\u2665\uF0B1\uF0B2\u25C6\u25C7\u25B6\u25B7\u25BA\u25CF\u25CB\u25C6\u25D8\uF0A8]+/g, ' ')
+    .replace(/[•◦▪◆■□►▶]/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/[\u0000-\u001F]/g, ' ')
+    .replace(/\s*\n\s*/g, '\n')
+    .trim()
+}
+
 export default function UploadForm({ onReady }) {
   const [files, setFiles] = useState([])
   const [text, setText] = useState('')
@@ -64,7 +74,7 @@ export default function UploadForm({ onReady }) {
         }
       }
 
-      extractedText = collectedSections.join('\n\n')
+      extractedText = normalizeExtractedText(collectedSections.join('\n\n'))
 
       if (!extractedText || extractedText.trim().length === 0) {
         setError('We could not extract usable text. Try using text-based PDFs or paste the lecture notes directly.')
