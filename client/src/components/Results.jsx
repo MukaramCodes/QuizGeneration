@@ -21,15 +21,22 @@ export default function Results({ quiz, results, onRestart }) {
           {results.details.map((r, idx) => (
             <li key={idx} className="result-item">
               <div className="stem">{r.question}</div>
+              <div className="status">
+                {r.userIndex === undefined || r.userIndex < 0
+                  ? 'Not answered'
+                  : r.userIndex === r.correctIndex
+                    ? 'Correct'
+                    : 'Incorrect'}
+              </div>
               <ul className="options">
                 {r.options.map((opt, oi) => {
                   const isCorrect = oi === r.correctIndex
                   const isChosen = oi === r.userIndex
                   return (
                     <li key={oi} className={`opt ${isCorrect ? 'correct' : ''} ${isChosen && !isCorrect ? 'chosen' : ''}`}>
-                      {opt}
-                      {isCorrect ? ' ✓' : ''}
-                      {isChosen && !isCorrect ? ' ✗' : ''}
+                      <span>{opt}</span>
+                      {isCorrect && <span className="badge">Correct answer</span>}
+                      {isChosen && !isCorrect && <span className="badge">Your answer</span>}
                     </li>
                   )
                 })}

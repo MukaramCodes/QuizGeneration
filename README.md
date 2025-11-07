@@ -1,7 +1,7 @@
 # Quizgen - Auto MCQ Generator from Lecture Materials
 
 ## Overview
-- Upload a PDF/TXT file or paste text directly
+- Upload up to 10 PDF/TXT files or paste text directly
 - **Everything runs in your browser** - no backend needed!
 - Automatically generates MCQs from your content
 - Interactive quiz interface with instant results
@@ -15,8 +15,8 @@
 ## Features
 ✅ **100% Client-Side** - No backend, no API calls, works offline after first load  
 ✅ **PDF Support** - Extract text from PDF files directly in browser  
-✅ **Text Files** - Upload .txt files or paste text directly  
-✅ **Auto Quiz Generation** - Creates 10 multiple-choice questions from your content  
+✅ **Text Files & Multiple Uploads** - Upload up to 10 .txt/.pdf files or paste text  
+✅ **Smarter Quiz Generation** - Builds context-aware, fill-in-the-blank MCQs from your notes  
 ✅ **Local Storage** - Quizzes and results saved in your browser  
 ✅ **No Installation** - Just open the app and use it!
 
@@ -112,16 +112,16 @@ Since this is a **client-only app**, deployment is super simple! Just deploy the
 ## 📖 Usage
 
 1. **Upload or Paste Content**
-   - Upload a PDF or TXT file, OR
-   - Paste text directly into the textarea
+   - Upload up to 10 PDF/TXT files (or mix with pasted text)
+   - For PowerPoint/Word files, export to PDF or copy/paste the text
 
 2. **Generate Quiz**
    - Click "Generate Quiz"
    - Quiz is created instantly in your browser
 
 3. **Take the Quiz**
-   - Answer all questions
-   - Click "Submit"
+   - Answer all questions (submission only allowed when every question is attempted)
+   - Click "Submit" once all answers are selected
 
 4. **View Results**
    - See your score and which answers were correct/wrong

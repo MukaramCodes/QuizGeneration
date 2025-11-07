@@ -11,14 +11,18 @@ function AppShell() {
   const [results, setResults] = useState(null)
   const navigate = useNavigate()
 
-  // Load quiz from localStorage if navigating back
+  // Load quiz/results from storage to support refresh or page revisit
   useEffect(() => {
     const storedQuizId = sessionStorage.getItem('currentQuizId')
-    if (storedQuizId) {
-      const storedQuiz = localStorage.getItem(`quiz_${storedQuizId}`)
-      if (storedQuiz) {
-        setQuiz(JSON.parse(storedQuiz))
-        setQuizId(storedQuizId)
+    if (!storedQuizId) return
+
+    const storedQuiz = localStorage.getItem(`quiz_${storedQuizId}`)
+    if (storedQuiz) {
+      setQuiz(JSON.parse(storedQuiz))
+      setQuizId(storedQuizId)
+      const storedResults = localStorage.getItem(`results_${storedQuizId}`)
+      if (storedResults) {
+        setResults(JSON.parse(storedResults))
       }
     }
   }, [])
@@ -28,6 +32,7 @@ function AppShell() {
     setQuizId(payload.id)
     setResults(null)
     sessionStorage.setItem('currentQuizId', payload.id)
+    localStorage.removeItem(`results_${payload.id}`)
     navigate('/quiz')
   }
 
@@ -45,6 +50,9 @@ function AppShell() {
   }
 
   const reset = () => {
+    if (quizId) {
+      localStorage.removeItem(`results_${quizId}`)
+    }
     setQuiz(null)
     setQuizId(null)
     setResults(null)

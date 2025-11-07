@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 
 export default function Quiz({ quiz, onSubmit, onBack }) {
   const [answers, setAnswers] = useState({})
+  const [error, setError] = useState('')
 
   useEffect(() => {
     setAnswers({})
+    setError('')
   }, [quiz])
 
   if (!quiz) {
@@ -18,10 +20,17 @@ export default function Quiz({ quiz, onSubmit, onBack }) {
 
   const handleChange = (qIdx, optIdx) => {
     setAnswers((prev) => ({ ...prev, [qIdx]: optIdx }))
+    if (error) setError('')
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    const unanswered = quiz.questions.filter((_, idx) => answers[idx] === undefined)
+    if (unanswered.length > 0) {
+      setError('Please attempt every question before submitting.')
+      return
+    }
+    setError('')
     onSubmit(answers)
   }
 
@@ -49,6 +58,7 @@ export default function Quiz({ quiz, onSubmit, onBack }) {
             </div>
           </div>
         ))}
+        {error && <div className="error" style={{ marginTop: '8px' }}>{error}</div>}
         <div className="actions">
           <button type="button" onClick={onBack} className="secondary">Back</button>
           <button type="submit">Submit</button>

@@ -15,6 +15,8 @@ button { background: var(--primary); color: #0a0f20; border: none; padding: 10px
 button.secondary { background: transparent; color: var(--text); border: 1px solid rgba(255,255,255,0.12); }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 .hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
+.file-list { margin: 4px 0 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+.file-list li { margin-bottom: 2px; list-style: disc; }
 .error { color: var(--danger); margin: 8px 0; }
 .question { padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px dashed rgba(255,255,255,0.08); }
 .stem { margin-bottom: 8px; }
@@ -26,10 +28,12 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .score { font-size: 18px; margin-bottom: 8px; }
 .result-list { padding-left: 18px; }
 .result-item { margin-bottom: 10px; }
+.result-item .status { color: var(--muted); font-size: 13px; margin: 4px 0 6px; }
 .result-item .options { display: block; }
-.result-item .opt { list-style: disc; margin-left: 18px; margin-bottom: 4px; }
+.result-item .opt { list-style: disc; margin-left: 18px; margin-bottom: 4px; display: flex; gap: 8px; align-items: center; }
 .result-item .opt.correct { color: var(--success); }
 .result-item .opt.chosen { color: var(--danger); }
+.badge { background: rgba(255,255,255,0.08); border-radius: 999px; padding: 2px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
 footer { margin-top: auto; color: var(--muted); text-align: center; padding-top: 16px; }
 
 
